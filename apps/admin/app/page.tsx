@@ -1,101 +1,477 @@
 'use client';
 
-import {useEffect, useState} from 'react';
-import {createClient, type Session} from '@supabase/supabase-js';
-import {QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
-import {useForm} from 'react-hook-form';
-import {zodResolver} from '@hookform/resolvers/zod';
-import {z} from 'zod';
-import {Activity, ArrowDownToLine, ArrowRight, BookOpen, CircleHelp, LayoutDashboard, LogOut, RefreshCw, ShieldCheck, Sparkles, TriangleAlert} from 'lucide-react';
-import {BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer} from 'recharts';
-import type {Activity as Audit, Metrics, Page, Profile, Template} from '@lifeflow/api-contracts';
-import {Button} from '../components/ui/button';
+import { useEffect, useState } from 'react';
+import { createClient, type Session } from '@supabase/supabase-js';
+import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Activity, ArrowDownToLine, ArrowRight, BookOpen, CircleHelp, LayoutDashboard, LogOut, RefreshCw, ShieldCheck, Sparkles, TriangleAlert } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import type { Activity as Audit, Metrics, Page, Profile, Template } from '@lifeflow/api-contracts';
+import { Button } from '../components/ui/button';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  HolographicText,
+  AnimatedCard,
+  ScanningLine,
+  TypingEffect,
+  AnimatedStat,
+  HolographicPanel,
+  CountUp
+} from '../components/cinematic';
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://unconfigured.supabase.co',
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'unconfigured', {auth: {persistSession: false}});
-const client = new QueryClient({defaultOptions: {queries: {retry: false, staleTime: 15000}}});
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'unconfigured', { auth: { persistSession: false } });
+const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 15000 } } });
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-const loginSchema = z.object({email: z.string().email(), password: z.string().min(8)});
+const loginSchema = z.object({ email: z.string().email(), password: z.string().min(8) });
 
 async function api<T>(path: string, token: string, method = 'GET'): Promise<T> {
-  const response = await fetch(`${API}/api/v1${path}`, {method, headers: {Authorization: `Bearer ${token}`}, signal: AbortSignal.timeout(15000)});
+  const response = await fetch(`${API}/api/v1${path}`, { method, headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000) });
   const data = await response.json();
   if (!response.ok) throw new Error(data.error?.message || 'Request failed');
   return data;
 }
 
-function Login({onLocal}: {onLocal: (session: Session) => void}) {
+function Login({ onLocal }: { onLocal: (session: Session) => void }) {
   const [error, setError] = useState('');
   const [devToken, setDevToken] = useState('');
-  const {register, handleSubmit, formState: {isSubmitting, errors}} = useForm<z.infer<typeof loginSchema>>({resolver: zodResolver(loginSchema)});
-  return <div className="login"><div className="brand"><Sparkles size={28}/>LifeFlow <small>AI</small></div>
-    <div><p className="eyebrow">Operations console</p><h1>A clear view of the system.</h1><p className="muted" style={{marginTop: 14}}>Sign in with an account granted the administrator role by an operator.</p></div>
-    <form onSubmit={handleSubmit(async values => {
-      setError(''); const {error} = await supabase.auth.signInWithPassword(values); if (error) setError(error.message);
-    })}><label>Email<input {...register('email')} type="email" autoComplete="username" required/></label>
-      {errors.email && <p role="alert">Enter a valid email.</p>}<label>Password<input {...register('password')} type="password" autoComplete="current-password" required/></label>
-      {errors.password && <p role="alert">Use at least 8 characters.</p>}{error && <p className="error" role="alert">{error}</p>}
-      <Button disabled={isSubmitting}>{isSubmitting ? 'Signing in…' : 'Continue'}<ArrowRight size={16}/></Button></form>
-    <small>Private documents stay private. This console displays operational metadata and audited events.</small>
-    {process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_ENABLE_DEV_AUTH === 'true' && <form onSubmit={event => {event.preventDefault(); void (async () => {
-      try {
-        const profile = await api<Profile>('/users/me', devToken);
-        if (!profile.development) throw new Error('Development authentication is unavailable.');
-        onLocal({access_token: devToken, refresh_token: '', expires_in: 7200, token_type: 'bearer', user: {
-          id: profile.id, email: profile.email, aud: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: '',
-        }});
-      } catch (error) {setError(String(error));}
-    })();}}><label>Local development token<input value={devToken} onChange={event => setDevToken(event.target.value)} type="password"/></label><Button>Open local session</Button></form>}</div>;
+  const { register, handleSubmit, formState: { isSubmitting, errors } } = useForm<z.infer<typeof loginSchema>>({ resolver: zodResolver(loginSchema) });
+  
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4 py-12">
+      <AnimatedCard className="w-full max-w-md p-8">
+        <ScanningLine />
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 shadow-[0_0_30px_rgba(168,85,247,0.6)]">
+            <Sparkles size={24} className="text-white" />
+          </div>
+          <HolographicText text="LifeFlow AI" className="text-2xl" />
+        </div>
+        <div className="mb-8">
+          <p className="text-xs uppercase tracking-widest text-purple-300 mb-3">Operations Console</p>
+          <TypingEffect text="Cinematic Intelligence Hub" className="text-2xl font-bold bg-gradient-to-r from-white via-cyan-200 to-purple-200 bg-clip-text text-transparent" speed={60} />
+          <p className="text-slate-300 mt-4 leading-relaxed">
+            Access the neural interface for system orchestration. Authenticate with administrator credentials.
+          </p>
+        </div>
+        <form onSubmit={handleSubmit(async values => {
+          setError('');
+          const { error } = await supabase.auth.signInWithPassword(values);
+          if (error) setError(error.message);
+        })} className="space-y-5">
+          <div>
+            <label className="text-sm text-slate-300 mb-2 block">EMAIL ID</label>
+            <input
+              {...register('email')}
+              type="email"
+              autoComplete="username"
+              required
+              className="w-full px-4 py-3 rounded-xl bg-black/40 backdrop-blur-xl border border-purple-500/40 text-white placeholder-slate-500 focus:border-cyan-400 focus:shadow-[0_0_20px_rgba(34,211,238,0.5)] transition-all duration-300"
+              placeholder="admin@lifeflow.ai"
+            />
+            {errors.email && <p className="text-red-400 text-sm mt-2">Enter a valid email.</p>}
+          </div>
+          <div>
+            <label className="text-sm text-slate-300 mb-2 block">ACCESS CODE</label>
+            <input
+              {...register('password')}
+              type="password"
+              autoComplete="current-password"
+              required
+              className="w-full px-4 py-3 rounded-xl bg-black/40 backdrop-blur-xl border border-purple-500/40 text-white placeholder-slate-500 focus:border-cyan-400 focus:shadow-[0_0_20px_rgba(34,211,238,0.5)] transition-all duration-300"
+              placeholder="password"
+            />
+            {errors.password && <p className="text-red-400 text-sm mt-2">Use at least 8 characters.</p>}
+          </div>
+          {error && <div className="p-3 rounded-xl bg-red-500/20 border border-red-400/40 text-red-300 text-sm">{error}</div>}
+          <Button type="submit" disabled={isSubmitting} className="w-full">
+            {isSubmitting ? 'AUTHENTICATING...' : 'INITIALIZE CONNECTION'}
+            <ArrowRight size={16} />
+          </Button>
+        </form>
+        <p className="text-xs text-slate-500 mt-6 text-center">Encrypted channel - Zero-trust architecture - Audited access</p>
+        {process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_ENABLE_DEV_AUTH === 'true' && (
+          <motion.form
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1 }}
+            onSubmit={event => {
+              event.preventDefault();
+              void (async () => {
+                try {
+                  const profile = await api<Profile>('/users/me', devToken);
+                  if (!profile.development) throw new Error('Development authentication is unavailable.');
+                  onLocal({
+                    access_token: devToken,
+                    refresh_token: '',
+                    expires_in: 7200,
+                    token_type: 'bearer',
+                    user: {
+                      id: profile.id,
+                      email: profile.email,
+                      aud: 'authenticated',
+                      app_metadata: {},
+                      user_metadata: {},
+                      created_at: '',
+                    }
+                  });
+                } catch (error) {
+                  setError(String(error));
+                }
+              })();
+            }}
+            className="mt-6 pt-6 border-t border-purple-500/30 space-y-3"
+          >
+            <label className="text-sm text-slate-300 block">LOCAL DEV TOKEN</label>
+            <input
+              value={devToken}
+              onChange={event => setDevToken(event.target.value)}
+              type="password"
+              className="w-full px-4 py-2 rounded-lg bg-black/40 backdrop-blur-xl border border-purple-500/40 text-white"
+              placeholder="Enter token"
+            />
+            <Button type="submit" size="sm" variant="outline" className="w-full">OPEN LOCAL SESSION</Button>
+          </motion.form>
+        )}
+      </AnimatedCard>
+    </div>
+  );
 }
 
-function Console({session}: {session: Session}) {
+function Console({ session }: { session: Session }) {
   const [view, setView] = useState<'overview' | 'failures' | 'audit' | 'templates'>('overview');
   const query = useQueryClient(); const token = session.access_token;
-  const profile = useQuery({queryKey: ['profile', session.user.id], queryFn: () => api<Profile>('/users/me', token)});
+  const profile = useQuery({ queryKey: ['profile', session.user.id], queryFn: () => api<Profile>('/users/me', token) });
   const isAdmin = profile.data?.role === 'admin';
-  const metrics = useQuery({queryKey: ['metrics', session.user.id], queryFn: () => api<Metrics>('/admin/metrics', token), enabled: isAdmin, refetchInterval: 30000});
-  const audit = useQuery({queryKey: ['audit', session.user.id], queryFn: () => api<Page<Audit & {owner_id: string; resource_id: string | null}>>('/admin/audit', token), enabled: isAdmin && view === 'audit'});
-  const templates = useQuery({queryKey: ['templates'], queryFn: () => api<Page<Template>>('/workflow-templates', token), enabled: isAdmin && view === 'templates'});
-  const retry = useMutation({mutationFn: (id: string) => api(`/admin/jobs/${id}/retry`, token, 'POST'), onSuccess: () => query.invalidateQueries({queryKey: ['metrics']})});
+  const metrics = useQuery({ queryKey: ['metrics', session.user.id], queryFn: () => api<Metrics>('/admin/metrics', token), enabled: isAdmin, refetchInterval: 30000 });
+  const audit = useQuery({ queryKey: ['audit', session.user.id], queryFn: () => api<Page<Audit & { owner_id: string; resource_id: string | null }>>('/admin/audit', token), enabled: isAdmin && view === 'audit' });
+  const templates = useQuery({ queryKey: ['templates'], queryFn: () => api<Page<Template>>('/workflow-templates', token), enabled: isAdmin && view === 'templates' });
+  const retry = useMutation({ mutationFn: (id: string) => api(`/admin/jobs/${id}/retry`, token, 'POST'), onSuccess: () => query.invalidateQueries({ queryKey: ['metrics'] }) });
   const data = metrics.data;
   function download() {
     if (!data) return;
-    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'}));
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
     const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'lifeflow-operations.json'; anchor.click(); URL.revokeObjectURL(url);
   }
   const views = [['overview', LayoutDashboard, 'Overview'], ['failures', TriangleAlert, 'Job failures'], ['audit', ShieldCheck, 'Audit trail'], ['templates', BookOpen, 'Templates']] as const;
-  return <div className="shell"><aside><div className="brand"><Sparkles size={27}/><span>LifeFlow<small> AI</small></span></div><nav aria-label="Console sections">
-    {views.map(([id, Icon, title]) => <button key={id} aria-label={title} aria-current={view === id ? 'page' : undefined} className={view === id ? 'active' : ''} onClick={() => setView(id)}><Icon size={19}/><span>{title}</span></button>)}
-    <button onClick={() => void supabase.auth.signOut()} aria-label="Sign out"><LogOut size={19}/><span>Sign out</span></button></nav>
-    <footer><ShieldCheck size={20}/><p>Restricted operational access</p><p>Private content is excluded.</p></footer></aside>
-    <main><header className="topline"><div><p className="eyebrow">Workspace / Operations</p><h1>{views.find(v => v[0] === view)?.[2]}</h1><p className="muted" style={{marginTop: 10}}>The details that keep everyday life running.</p></div>
-      <div className="status"><i/>{data?.environment || 'Connecting'}</div></header>
-      {(profile.error || metrics.error || audit.error || retry.error) && <div className="error" role="alert">{(profile.error || metrics.error || audit.error || retry.error)?.message}</div>}
-      {profile.data && !isAdmin && <div className="error" role="alert">Your account does not have administrator access. An operator must grant it using the server management command.</div>}
-      {isAdmin && <><div className="panel-heading"><p className="muted">Updated {metrics.dataUpdatedAt ? new Date(metrics.dataUpdatedAt).toLocaleTimeString() : 'when connected'}. Refreshes every 30 seconds.</p><Button variant="outline" onClick={() => void metrics.refetch()} disabled={metrics.isFetching}><RefreshCw size={15}/>Refresh</Button></div>
-        {metrics.isLoading && <div className="skeleton" aria-label="Loading operational data"/>}
-        {data && view === 'overview' && <><div className="stats">{[['Registered users', data.totals.users], ['Documents uploaded', data.totals.documents], ['Tasks created', data.totals.tasks], ['Active subscriptions', data.active_subscriptions]].map(([title, count]) => <div className="stat" key={title}><small>{title}</small><strong>{Number(count).toLocaleString()}</strong></div>)}</div>
-          <div className="columns"><section className="panel"><div className="panel-heading"><div><h2>Activity across the system</h2><p className="muted">Persisted records by module</p></div><Activity size={20} className="dot"/></div>
-            <div style={{height: 260, minWidth: 0}}><ResponsiveContainer width="100%" height="100%"><BarChart data={Object.entries(data.totals).map(([name, count]) => ({name: name.replace('notification_', ''), count}))} margin={{left: -20, top: 10}}>
-              <XAxis dataKey="name" fontSize={11} axisLine={false} tickLine={false}/><YAxis allowDecimals={false} fontSize={11} axisLine={false} tickLine={false}/><Tooltip cursor={{fill: 'var(--tint)'}}/><Bar dataKey="count" fill="var(--accent)" radius={[4, 4, 0, 0]} maxBarSize={34}/></BarChart></ResponsiveContainer></div></section>
-            <section className="panel spaced"><div><p className="eyebrow">AI resource use</p><h2>Usage you can account for.</h2></div><div><small>Tokens processed</small><p style={{fontSize: 28, fontWeight: 650}}>{data.ai_tokens.toLocaleString()}</p></div><div><small>Estimated provider cost</small><p style={{fontSize: 24, fontWeight: 600}}>${data.ai_estimated_cost.toFixed(4)}</p><small>Based on configured rates. Confirm against provider billing.</small></div><Button variant="outline" onClick={download}><ArrowDownToLine size={15}/>Export snapshot</Button></section></div>
-          <section className="panel"><div className="panel-heading"><div><h2>Background jobs</h2><p className="muted">Failures and ambiguous outcomes that need attention</p></div><Button variant="outline" onClick={() => setView('failures')}>View queue<ArrowRight size={15}/></Button></div>
-            {data.job_failures.length === 0 ? <div className="empty">No failed jobs recorded.</div> : <p>{data.job_failures.length} jobs need review. Open the queue to inspect failure codes.</p>}</section>
-          <div style={{display: 'flex', gap: 10, alignItems: 'start', color: 'var(--muted)', fontSize: 13}}><CircleHelp size={18}/><p>Counts come from the application database. Push acceptance and delivery receipts have separate states; they do not confirm that a user saw a reminder.</p></div></>}
-        {data && view === 'failures' && <section className="panel"><h2>Jobs needing attention</h2><div className="table-wrap"><table><thead><tr><th>Job</th><th>Type</th><th>Status</th><th>Attempts</th><th>Failure code</th><th>Action</th></tr></thead><tbody>{data.job_failures.map(job => <tr key={job.id}><td><code>{job.id.slice(0, 8)}</code></td><td>{job.kind}</td><td>{job.status}</td><td>{job.attempts}</td><td>{job.error_code || 'Inspect provider state'}</td><td>{job.status === 'failed' && job.kind !== 'notification' ? <Button variant="outline" disabled={retry.isPending} onClick={() => retry.mutate(job.id)}>Retry</Button> : 'Operator review'}</td></tr>)}</tbody></table></div>{data.job_failures.length === 0 && <p className="empty">No failed jobs recorded.</p>}</section>}
-        {view === 'audit' && <section className="panel"><h2>Audited activity</h2><div className="table-wrap"><table><thead><tr><th>When</th><th>Action</th><th>Actor ID</th><th>Resource ID</th></tr></thead><tbody>{audit.data?.items.map(row => <tr key={row.id}><td>{new Date(row.created_at).toLocaleString()}</td><td>{row.action}</td><td><code>{row.owner_id.slice(0, 8)}</code></td><td><code>{row.resource_id?.slice(0, 8) || '—'}</code></td></tr>)}</tbody></table></div></section>}
-        {view === 'templates' && <section className="panel"><h2>Workflow template catalog</h2><p className="muted">Versioned in the backend seed catalog. Regulatory requirements have not been verified.</p><div className="table-wrap"><table><thead><tr><th>Template</th><th>Verification</th><th>Guidance</th></tr></thead><tbody>{templates.data?.items.map(row => <tr key={row.id}><td>{row.title}</td><td>{row.verified_at || 'Unverified'}</td><td>{row.description}</td></tr>)}</tbody></table></div></section>}</>}
-    </main></div>;
+  
+  return (
+    <div className="min-h-screen">
+      <div className="flex flex-col lg:flex-row">
+        <aside className="lg:w-72 backdrop-blur-2xl bg-gradient-to-br from-slate-900/90 to-black/90 border-b lg:border-b-0 lg:border-r border-purple-500/40 p-6 lg:p-8 flex flex-col gap-8 relative overflow-hidden">
+          <ScanningLine />
+          <div className="flex items-center gap-3 relative z-10">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 shadow-[0_0_30px_rgba(168,85,247,0.7)]">
+              <Sparkles size={28} />
+            </div>
+            <div>
+              <HolographicText text="LifeFlow" className="text-xl" />
+              <p className="text-xs text-cyan-400 tracking-widest">NEURAL CONSOLE</p>
+            </div>
+          </div>
+          <nav className="flex flex-col gap-2 relative z-10" aria-label="Console sections">
+            {views.map(([id, Icon, title], idx) => (
+              <motion.button
+                key={id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                aria-label={title}
+                aria-current={view === id ? 'page' : undefined}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${view === id ? 'bg-gradient-to-r from-purple-600/60 to-indigo-600/60 border border-cyan-400/60 text-white shadow-[0_0_20px_rgba(34,211,238,0.5)]' : 'text-slate-300 hover:bg-white/5 hover:text-white border border-transparent hover:border-purple-400/40'}`}
+                onClick={() => setView(id)}
+              >
+                <Icon size={20} className={view === id ? 'text-cyan-400' : ''} />
+                <span className="font-medium">{title}</span>
+              </motion.button>
+            ))}
+            <motion.button
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+              onClick={() => void supabase.auth.signOut()}
+              aria-label="Sign out"
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-red-500/20 hover:text-red-300 border border-transparent hover:border-red-400/40 transition-all duration-300 mt-4"
+            >
+              <LogOut size={20} />
+              <span className="font-medium">TERMINATE</span>
+            </motion.button>
+          </nav>
+          <footer className="mt-auto text-xs text-slate-500 space-y-2 relative z-10">
+            <div className="flex items-center gap-2">
+              <ShieldCheck size={16} className="text-cyan-400" />
+              <span>QUANTUM-SECURED</span>
+            </div>
+            <p>Restricted operational access</p>
+            <p>Private content is excluded</p>
+          </footer>
+        </aside>
+        <main className="flex-1 p-6 lg:p-10 max-w-7xl mx-auto w-full">
+          <motion.header initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="mb-10">
+            <p className="text-xs uppercase tracking-[0.3em] text-purple-300 mb-4">SYSTEM STATUS</p>
+            <HolographicText text={views.find(v => v[0] === view)?.[2] || 'Overview'} className="text-5xl mb-4" />
+            <TypingEffect text="Cinematic data visualization for mission-critical operations" className="text-slate-300 text-lg" speed={40} />
+            <div className="flex items-center gap-3 mt-6 flex-wrap">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-xl bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-400/50">
+                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-sm text-green-300">{data?.environment || 'SYNCING'}</span>
+              </div>
+              {metrics.dataUpdatedAt && (
+                <div className="px-4 py-2 rounded-full backdrop-blur-xl bg-white/5 border border-purple-400/40 text-sm text-slate-300">
+                  Last sync: {new Date(metrics.dataUpdatedAt).toLocaleTimeString()}
+                </div>
+              )}
+            </div>
+          </motion.header>
+          <AnimatePresence>
+            {(profile.error || metrics.error || audit.error || retry.error) && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="mb-6 p-4 rounded-xl bg-red-500/20 border border-red-400/50 text-red-300 backdrop-blur-xl">
+                {(profile.error || metrics.error || audit.error || retry.error)?.message}
+              </motion.div>
+            )}
+          </AnimatePresence>
+          {profile.data && !isAdmin && (
+            <AnimatedCard className="p-6 mb-6">
+              <div className="flex items-center gap-3 text-red-300">
+                <TriangleAlert size={24} />
+                <p>Administrator access required. Contact system operator.</p>
+              </div>
+            </AnimatedCard>
+          )}
+          {isAdmin && (
+            <>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+                <p className="text-slate-400">Auto-refresh: 30s - Real-time telemetry active</p>
+                <Button variant="outline" onClick={() => void metrics.refetch()} disabled={metrics.isFetching}>
+                  <RefreshCw size={16} className={metrics.isFetching ? 'animate-spin' : ''} />
+                  {metrics.isFetching ? 'SYNCING...' : 'MANUAL SYNC'}
+                </Button>
+              </div>
+              {metrics.isLoading && (
+                <AnimatedCard className="p-12 mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="w-8 h-8 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                    <TypingEffect text="Initializing quantum data streams..." className="text-slate-300" />
+                  </div>
+                </AnimatedCard>
+              )}
+              {data && view === 'overview' && (
+                <div className="space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <AnimatedStat title="Registered Users" count={data.totals.users} delay={0.1} icon={<Activity size={18} />} />
+                    <AnimatedStat title="Documents" count={data.totals.documents} delay={0.2} icon={<BookOpen size={18} />} />
+                    <AnimatedStat title="Tasks Created" count={data.totals.tasks} delay={0.3} icon={<LayoutDashboard size={18} />} />
+                    <AnimatedStat title="Active Subscriptions" count={data.active_subscriptions} delay={0.4} icon={<Sparkles size={18} />} />
+                  </div>
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                    <HolographicPanel delay={0.5} className="h-[380px]">
+                      <div className="flex items-center justify-between mb-6">
+                        <div>
+                          <p className="text-xs uppercase tracking-widest text-cyan-400 mb-2">SYSTEM ACTIVITY</p>
+                          <h2 className="text-white">Module Distribution</h2>
+                          <p className="text-slate-400 mt-1">Persisted records across architecture</p>
+                        </div>
+                        <Activity size={22} className="text-cyan-400" />
+                      </div>
+                      <div className="h-[280px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={Object.entries(data.totals).map(([name, count]) => ({ name: name.replace('notification_', '').toUpperCase(), count }))} margin={{ left: -20, top: 10, right: 10, bottom: 10 }}>
+                            <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} />
+                            <YAxis allowDecimals={false} fontSize={10} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} />
+                            <Tooltip cursor={{ fill: 'rgba(168,85,247,0.2)' }} contentStyle={{ background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(168,85,247,0.5)', borderRadius: '12px', color: '#fff' }} />
+                            <Bar dataKey="count" fill="url(#gradient)" radius={[6, 6, 0, 0]} maxBarSize={36} />
+                            <defs>
+                              <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#a78bfa" />
+                                <stop offset="100%" stopColor="#22d3ee" />
+                              </linearGradient>
+                            </defs>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </HolographicPanel>
+                    <HolographicPanel delay={0.6} className="space-y-6">
+                      <div>
+                        <p className="text-xs uppercase tracking-widest text-cyan-400 mb-2">AI RESOURCE MATRIX</p>
+                        <h2 className="text-white mb-2">Token Economy</h2>
+                        <p className="text-slate-400">Quantum-precise consumption tracking</p>
+                      </div>
+                      <div className="space-y-6">
+                        <div className="p-4 rounded-xl bg-gradient-to-br from-purple-900/40 to-black/60 border border-purple-500/40">
+                          <small className="text-purple-300 uppercase tracking-widest text-xs">Tokens Processed</small>
+                          <p className="text-4xl font-bold mt-2 bg-gradient-to-r from-white to-cyan-200 bg-clip-text text-transparent"><CountUp end={data.ai_tokens} /></p>
+                        </div>
+                        <div className="p-4 rounded-xl bg-gradient-to-br from-cyan-900/30 to-black/60 border border-cyan-400/40">
+                          <small className="text-cyan-300 uppercase tracking-widest text-xs">Estimated Cost</small>
+                          <p className="text-3xl font-bold mt-2 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">${data.ai_estimated_cost.toFixed(4)}</p>
+                          <p className="text-xs text-slate-500 mt-2">Provider billing may differ</p>
+                        </div>
+                      </div>
+                      <Button variant="outline" onClick={download} className="w-full">
+                        <ArrowDownToLine size={16} />
+                        EXPORT NEURAL SNAPSHOT
+                      </Button>
+                    </HolographicPanel>
+                  </div>
+                  <AnimatedCard className="p-6" delay={0.7}>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div>
+                        <p className="text-xs uppercase tracking-widest text-cyan-400 mb-2">JOB MATRIX</p>
+                        <h2 className="text-white">Background Processes</h2>
+                        <p className="text-slate-400 mt-2">{data.job_failures.length === 0 ? 'All background operations optimal' : `${data.job_failures.length} anomalies detected - require intervention`}</p>
+                      </div>
+                      <Button variant="outline" onClick={() => setView('failures')}>
+                        SCAN QUEUE
+                        <ArrowRight size={16} />
+                      </Button>
+                    </div>
+                  </AnimatedCard>
+                  <div className="flex items-start gap-3 text-slate-500 text-sm">
+                    <CircleHelp size={18} className="mt-0.5 flex-shrink-0" />
+                    <p>Telemetry sourced from application database. Push receipts do not confirm user visibility.</p>
+                  </div>
+                </div>
+              )}
+              {data && view === 'failures' && (
+                <HolographicPanel delay={0.2}>
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <p className="text-xs uppercase tracking-widest text-red-400 mb-2">ANOMALY DETECTION</p>
+                      <h2 className="text-white">Jobs Requiring Intervention</h2>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-purple-500/30">
+                          <th className="text-left py-3 px-4 text-xs uppercase tracking-widest text-slate-400">JOB ID</th>
+                          <th className="text-left py-3 px-4 text-xs uppercase tracking-widest text-slate-400">TYPE</th>
+                          <th className="text-left py-3 px-4 text-xs uppercase tracking-widest text-slate-400">STATUS</th>
+                          <th className="text-left py-3 px-4 text-xs uppercase tracking-widest text-slate-400">ATTEMPTS</th>
+                          <th className="text-left py-3 px-4 text-xs uppercase tracking-widest text-slate-400">ERROR</th>
+                          <th className="text-left py-3 px-4 text-xs uppercase tracking-widest text-slate-400">ACTION</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.job_failures.map((job) => (
+                          <tr key={job.id} className="border-b border-purple-500/20 hover:bg-white/5 transition-colors">
+                            <td className="py-4 px-4"><code className="text-cyan-400 text-sm">{job.id.slice(0, 8)}</code></td>
+                            <td className="py-4 px-4 text-slate-300">{job.kind}</td>
+                            <td className="py-4 px-4"><span className="px-2 py-1 rounded-full text-xs bg-red-500/20 text-red-300 border border-red-400/40">{job.status}</span></td>
+                            <td className="py-4 px-4 text-slate-300">{job.attempts}</td>
+                            <td className="py-4 px-4 text-slate-400 text-sm">{job.error_code || 'Inspect provider state'}</td>
+                            <td className="py-4 px-4">
+                              {job.status === 'failed' && job.kind !== 'notification' ? (
+                                <Button variant="outline" size="sm" disabled={retry.isPending} onClick={() => retry.mutate(job.id)}>
+                                  {retry.isPending ? 'RETRYING...' : 'REQUEUE'}
+                                </Button>
+                              ) : (
+                                <span className="text-slate-500 text-sm">OPERATOR REVIEW</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {data.job_failures.length === 0 && (
+                    <div className="text-center py-12 text-slate-400">
+                      <ShieldCheck size={48} className="mx-auto mb-4 text-green-400" />
+                      <p>No anomalies detected. System nominal.</p>
+                    </div>
+                  )}
+                </HolographicPanel>
+              )}
+              {view === 'audit' && (
+                <HolographicPanel delay={0.2}>
+                  <div className="mb-6">
+                    <p className="text-xs uppercase tracking-widest text-cyan-400 mb-2">AUDIT TRAIL</p>
+                    <h2 className="text-white">Chrono-Encrypted Events</h2>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-purple-500/30">
+                          <th className="text-left py-3 px-4 text-xs uppercase tracking-widest text-slate-400">TIMESTAMP</th>
+                          <th className="text-left py-3 px-4 text-xs uppercase tracking-widest text-slate-400">ACTION</th>
+                          <th className="text-left py-3 px-4 text-xs uppercase tracking-widest text-slate-400">ACTOR</th>
+                          <th className="text-left py-3 px-4 text-xs uppercase tracking-widest text-slate-400">RESOURCE</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {audit.data?.items.map(row => (
+                          <tr key={row.id} className="border-b border-purple-500/20 hover:bg-white/5 transition-colors">
+                            <td className="py-4 px-4 text-slate-300 text-sm">{new Date(row.created_at).toLocaleString()}</td>
+                            <td className="py-4 px-4"><span className="px-2 py-1 rounded-full text-xs bg-cyan-500/20 text-cyan-300 border border-cyan-400/40">{row.action}</span></td>
+                            <td className="py-4 px-4"><code className="text-purple-300 text-sm">{row.owner_id.slice(0, 8)}</code></td>
+                            <td className="py-4 px-4"><code className="text-slate-400 text-sm">{row.resource_id?.slice(0, 8) || '—'}</code></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </HolographicPanel>
+              )}
+              {view === 'templates' && (
+                <HolographicPanel delay={0.2}>
+                  <div className="mb-6">
+                    <p className="text-xs uppercase tracking-widest text-cyan-400 mb-2">TEMPLATE LIBRARY</p>
+                    <h2 className="text-white">Workflow Archetypes</h2>
+                    <p className="text-slate-400 mt-2">Versioned neural templates - verification status indicated</p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-purple-500/30">
+                          <th className="text-left py-3 px-4 text-xs uppercase tracking-widest text-slate-400">TEMPLATE</th>
+                          <th className="text-left py-3 px-4 text-xs uppercase tracking-widest text-slate-400">VERIFICATION</th>
+                          <th className="text-left py-3 px-4 text-xs uppercase tracking-widest text-slate-400">GUIDANCE</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {templates.data?.items.map(row => (
+                          <tr key={row.id} className="border-b border-purple-500/20 hover:bg-white/5 transition-colors">
+                            <td className="py-4 px-4 text-slate-200 font-medium">{row.title}</td>
+                            <td className="py-4 px-4"><span className={`px-2 py-1 rounded-full text-xs border ${row.verified_at ? 'bg-green-500/20 text-green-300 border-green-400/40' : 'bg-yellow-500/20 text-yellow-300 border-yellow-400/40'}`}>{row.verified_at ? 'VERIFIED' : 'UNVERIFIED'}</span></td>
+                            <td className="py-4 px-4 text-slate-400 text-sm">{row.description}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </HolographicPanel>
+              )}
+            </>
+          )}
+        </main>
+      </div>
+    </div>
+  );
 }
 
 function App() {
-  const [session, setSession] = useState<Session | null>(null); const [restored, setRestored] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
+  const [restored, setRestored] = useState(false);
   useEffect(() => {
-    void supabase.auth.getSession().then(({data}) => {setSession(data.session); setRestored(true);});
-    const {data} = supabase.auth.onAuthStateChange((_event, next) => {client.clear(); setSession(next); setRestored(true);});
+    void supabase.auth.getSession().then(({ data }) => { setSession(data.session); setRestored(true); });
+    const { data } = supabase.auth.onAuthStateChange((_event, next) => { client.clear(); setSession(next); setRestored(true); });
     return () => data.subscription.unsubscribe();
   }, []);
-  if (!restored) return <main><div className="skeleton" aria-label="Restoring session"/></main>;
-  return session ? <Console session={session}/> : <Login onLocal={setSession}/>;
+  if (!restored) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <AnimatedCard className="p-8">
+          <div className="flex items-center gap-4">
+            <div className="w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+            <TypingEffect text="Establishing neural link..." className="text-slate-300" />
+          </div>
+        </AnimatedCard>
+      </div>
+    );
+  }
+  return session ? <Console session={session} /> : <Login onLocal={setSession} />;
 }
-export default function Page() {return <QueryClientProvider client={client}><App/></QueryClientProvider>;}
+
+export default function Page() { return <QueryClientProvider client={client}><App /></QueryClientProvider>; }

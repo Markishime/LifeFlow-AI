@@ -21,3 +21,6 @@ test-results/
 .pytest-verify/
 .npm-audit.json
 .local-session.json
+.vercel/
+
+.vercel
