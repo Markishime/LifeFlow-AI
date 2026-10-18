@@ -3,8 +3,8 @@ import './globals.css';
 import StarField from '../components/cinematic/starfield';
 
 export const metadata: Metadata = {
-  title: 'LifeFlow AI - Operations Console',
-  description: 'Cinematic operations console for LifeFlow AI',
+  title: 'LifeFlow AI - Automation Operations Console',
+  description: 'Onboarding and cinematic operations console for LifeFlow AI',
 };
 
 export default function RootLayout({
