@@ -1,0 +1,11 @@
+.git
+node_modules
+.venv
+**/.next
+**/.expo
+**/.pytest*
+**/__pycache__
+**/.env*
+**/*.db
+**/.local-storage
+test-results

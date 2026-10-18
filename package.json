@@ -1,0 +1,28 @@
+{
+  "name": "lifeflow-ai",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "mobile:local": "node scripts/local-mobile.cjs",
+    "mobile": "npm run start --workspace @lifeflow/mobile",
+    "admin": "npm run dev --workspace @lifeflow/admin",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint apps packages --max-warnings=0",
+    "test": "npm run test --workspace @lifeflow/mobile",
+    "build:admin": "npm run build --workspace @lifeflow/admin"
+  },
+  "devDependencies": {
+    "typescript": "5.9.2",
+    "eslint": "9.39.5",
+    "typescript-eslint": "8.71.2",
+    "eslint-plugin-react-hooks": "5.2.0",
+    "@types/react": "19.2.14"
+  },
+  "engines": {
+    "node": ">=22.16.0"
+  }
+}
